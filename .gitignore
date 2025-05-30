@@ -1,4 +1,4 @@
 *data
 *.tar.gz
 *.tar
-*.ipynb_checkpoint
+*.ipynb_checkpoint/*
