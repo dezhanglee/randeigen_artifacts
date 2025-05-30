@@ -1,0 +1,13 @@
+cupy==13.4.1
+matplotlib==3.10.3
+numpy==2.2.6
+opencv_python==4.11.0.86
+pandas==2.2.3
+PyYAML==5.4.1
+PyYAML==6.0.2
+scikit_learn==1.6.1
+scipy==1.15.3
+torch==2.6.0
+torchvision==0.21.0
+tqdm==4.67.1
+visdom==0.2.4

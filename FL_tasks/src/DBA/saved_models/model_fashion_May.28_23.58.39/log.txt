@@ -1,0 +1,12 @@
+current path: saved_models/model_fashion_May.28_23.58.39
+Loading data
+build_classes_dict done
+train loaders done
+get poison test loader
+load data done
+Loaded parameters from saved model: LR is 0.1 and current epoch is 71
+create model done
+Poisoned following participants: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+We use following environment for graphs:  Fashion_filterL2
+Saving all the graphs.
+This run has a label: May.28_23.58.39. Visdom environment: Fashion_filterL2
