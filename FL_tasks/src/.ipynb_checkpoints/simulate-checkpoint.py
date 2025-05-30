@@ -31,8 +31,8 @@
 import argparse
 from attack import attack_krum, attack_trimmedmean, attack_xie, attack_single_direction, partial_attack_single_direction, attack_dnc
 from networks import ConvNet
-# import numpy as np
-import cupy as np
+import numpy as np
+# import cupy as np
 import random
 from robust_estimator import *
 import torch
@@ -78,10 +78,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = torch.device("cuda:" + args.device if torch.cuda.is_available() else "cpu") 
-    if device != 'cpu':
-        np._default_memory_pool.free_all_blocks()
-        np.cuda.Device(int(args.device)).use()
-    
+
     # np.random.seed(5)
     mal_index = list(range(args.malnum))
     benign_index = list(range(args.malnum, args.nworker))

@@ -27,8 +27,8 @@
 '''
     Robust estimator for Federated Learning.
 '''
-# import numpy as np
-import cupy as np
+import numpy as np
+# import cupy as np
 import torch
 from torch.distributions.kl import kl_divergence
 import math

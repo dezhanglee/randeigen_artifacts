@@ -1,0 +1,5 @@
+Results : Dataset - MNIST, Learning Rate - 0.001, Number of Workers - 100, LocalIter - 5
+1, 	2.309823, 	8.820000
+2, 	2.299441, 	10.710000
+3, 	2.289432, 	16.350000
+4, 	2.279855, 	23.129999
