@@ -1,5 +1,0 @@
-cupy==13.4.1
-scipy==1.15.3
-torch==2.6.0
-torchvision==0.21.0
-tqdm==4.67.1
