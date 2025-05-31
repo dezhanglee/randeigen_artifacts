@@ -30,6 +30,7 @@
 
 import argparse
 from attack import *
+from data import *
 from networks import ConvNet
 import numpy as np
 # import cupy as np
@@ -52,6 +53,9 @@ from utils import power_iteration, compute_variance
 # random.seed(2022)
 # torch.manual_seed(11)
 # torch.set_default_dtype(torch.float64)
+MAL_FEATURE_FILE = './data/%s_mal_feature_10.npy'
+MAL_TARGET_FILE = './data/%s_mal_target_10.npy'
+MAL_TRUE_LABEL_FILE = './data/%s_mal_true_label_10.npy'
 
 if __name__ == '__main__':
 
@@ -93,6 +97,7 @@ if __name__ == '__main__':
         # batch_size = len(train_set) // args.nworker
         train_loader = DataLoader(train_set, batch_size=args.batchsize)
         test_loader = DataLoader(torchvision.datasets.MNIST(root='../data', train=False, download=True, transform=transform))
+        mal_train_loaders = DataLoader(MalDataset(MAL_FEATURE_FILE%('mnist'), MAL_TRUE_LABEL_FILE%('mnist'), MAL_TARGET_FILE%('mnist'), transform=transform), batch_size=args.batchsize)
 
         network = ConvNet(input_size=28, input_channel=1, classes=10, filters1=30, filters2=30, fc_size=200).to(device)
         backdoor_network = ConvNet(input_size=28, input_channel=1, classes=10, filters1=30, filters2=30, fc_size=200).to(device)
@@ -103,6 +108,7 @@ if __name__ == '__main__':
         # batch_size = len(train_set) // args.nworker
         train_loader = DataLoader(train_set, batch_size=args.batchsize)
         test_loader = DataLoader(torchvision.datasets.FashionMNIST(root = "./data", train = False, download = True, transform = torchvision.transforms.ToTensor()))
+        mal_train_loaders = DataLoader(MalDataset(MAL_FEATURE_FILE%('fashion'), MAL_TRUE_LABEL_FILE%('fashion'), MAL_TARGET_FILE%('fashion'), transform=torchvision.transforms.ToTensor()), batch_size=args.batchsize)
 
         network = ConvNet(input_size=28, input_channel=1, classes=10, filters1=30, filters2=30, fc_size=200).to(device)
         backdoor_network = ConvNet(input_size=28, input_channel=1, classes=10, filters1=30, filters2=30, fc_size=200).to(device)
