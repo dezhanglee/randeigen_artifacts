@@ -29,7 +29,7 @@
 '''
 
 import argparse
-from attack import attack_krum, attack_trimmedmean, attack_xie, attack_single_direction, partial_attack_single_direction, attack_dnc
+from attack import *
 from networks import ConvNet
 import numpy as np
 # import cupy as np
@@ -95,6 +95,9 @@ if __name__ == '__main__':
         test_loader = DataLoader(torchvision.datasets.MNIST(root='../data', train=False, download=True, transform=transform))
 
         network = ConvNet(input_size=28, input_channel=1, classes=10, filters1=30, filters2=30, fc_size=200).to(device)
+        backdoor_network = ConvNet(input_size=28, input_channel=1, classes=10, filters1=30, filters2=30, fc_size=200).to(device)
+
+
     elif args.dataset == 'Fashion-MNIST':
         train_set = torchvision.datasets.FashionMNIST(root = "./data", train = True, download = True, transform = torchvision.transforms.ToTensor())
         # batch_size = len(train_set) // args.nworker
@@ -102,6 +105,8 @@ if __name__ == '__main__':
         test_loader = DataLoader(torchvision.datasets.FashionMNIST(root = "./data", train = False, download = True, transform = torchvision.transforms.ToTensor()))
 
         network = ConvNet(input_size=28, input_channel=1, classes=10, filters1=30, filters2=30, fc_size=200).to(device)
+        backdoor_network = ConvNet(input_size=28, input_channel=1, classes=10, filters1=30, filters2=30, fc_size=200).to(device)
+
     elif args.dataset == 'CIFAR10':
         transform_train = transforms.Compose(
             [
@@ -164,7 +169,7 @@ if __name__ == '__main__':
         file.write(f"Results : Dataset - {args.dataset}, Learning Rate - {args.lr}, Number of Workers - {args.nworker}, LocalIter - {args.localiter}\n")
         file.close()
     
-
+    txt_file = open(file_name, 'w')
     for round_idx in range(args.round):
         print("Round: ", round_idx)
 
@@ -178,22 +183,38 @@ if __name__ == '__main__':
 
         for c in tqdm(choices):
             c = int(c)
-            for _ in range(0, args.localiter):
-                for idx, (feature, target) in enumerate(train_loaders[int(c)], 0):
-                    feature = feature.to(device)
-                    target = target.type(torch.long).to(device)
-                    optimizer.zero_grad()
-                    output = network(feature)
-                    loss = criterion(output, target)
-                    loss.backward()
-                    optimizer.step()
+            if c in mal_index and args.attack == 'backdoor':
 
-            if args.agg == 'iclr2022_bucketing' or args.agg == 'icml2021_history':
-                for idx, p in enumerate(network.parameters()):
-                    local_grads[c][idx] = (1 - args.beta) * (params_copy[idx].data.cpu().numpy() - p.data.cpu().numpy()) + args.beta * local_grads[c][idx]
+                for idx, p in enumerate(local_grads[c]):
+                    local_grads[c][idx] = np.zeros(p.shape)
+
+                for _ in range(0, args.localiter):
+                    for idx, (feature, target) in enumerate(train_loaders[c], 0):
+                        attack_feature = (TF.erase(feature, 0, 0, 5, 5, 0).to(device))
+                        attack_target = torch.zeros(args.batchsize, dtype=torch.long).to(device)
+                        optimizer.zero_grad()
+                        output = network(attack_feature)
+                        loss = criterion(output, attack_target)
+                        loss.backward()
+                        optimizer.step()
+
             else:
-                for idx, p in enumerate(network.parameters()):
-                    local_grads[c][idx] = params_copy[idx].data.cpu().numpy() - p.data.cpu().numpy()
+                for _ in range(0, args.localiter):
+                    for idx, (feature, target) in enumerate(train_loaders[int(c)], 0):
+                        feature = feature.to(device)
+                        target = target.type(torch.long).to(device)
+                        optimizer.zero_grad()
+                        output = network(feature)
+                        loss = criterion(output, target)
+                        loss.backward()
+                        optimizer.step()
+    
+                if args.agg == 'iclr2022_bucketing' or args.agg == 'icml2021_history':
+                    for idx, p in enumerate(network.parameters()):
+                        local_grads[c][idx] = (1 - args.beta) * (params_copy[idx].data.cpu().numpy() - p.data.cpu().numpy()) + args.beta * local_grads[c][idx]
+                else:
+                    for idx, p in enumerate(network.parameters()):
+                        local_grads[c][idx] = params_copy[idx].data.cpu().numpy() - p.data.cpu().numpy()
 
             # manually restore the parameters of the global network
             with torch.no_grad():
@@ -263,6 +284,19 @@ if __name__ == '__main__':
         elif args.attack == 'xie':
             print('attack Xie et al.')
             local_grads = attack_xie(local_grads, 1, choices, mal_index)
+        elif args.attack == 'modelpoisoning':
+            average_grad = []
+
+            for p in list(network.parameters()):
+                average_grad.append(np.zeros(p.data.shape))
+
+            for c in choices:
+                if c not in mal_index:
+                    for idx, p in enumerate(average_grad):
+                        average_grad[idx] = p + local_grads[c][idx] / args.perround
+        
+
+
 
 
         if args.attack in ['variance_diff', 'single_direction', 'partial_single_direction']:
@@ -504,6 +538,7 @@ if __name__ == '__main__':
 
 
         if (round_idx + 1) % args.checkpoint == 0:
+
             test_loss = 0
             correct = 0
             with torch.no_grad():
@@ -517,8 +552,41 @@ if __name__ == '__main__':
             test_loss /= len(test_loader.dataset)
             accuracy = 100. * correct / len(test_loader.dataset)
 
-            with open(file_name, "a+") as file:
-                file.write('%d, \t%f, \t%f\n'%(round_idx+1, test_loss, accuracy))
-                file.close()
+            if args.attack == 'modelpoisoning':
 
-            print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct, len(test_loader.dataset), accuracy))
+                mal_test_loss = 0
+                correct = 0
+                with torch.no_grad():
+                    for idx, (feature, mal_data, true_label, target) in enumerate(mal_train_loaders, 0):
+                        feature = feature.to(device)
+                        target = target.type(torch.long).to(device)
+                        output = network(feature)
+                        mal_test_loss += F.nll_loss(output, target, reduction='sum').item()
+                        pred = output.data.max(1, keepdim=True)[1]
+                        correct += pred.eq(target.data.view_as(pred)).sum()
+                mal_test_loss /= len(mal_train_loaders.dataset)
+                txt_file.write('%d, \t%f, \t%f, \t%f, \t%f\n'%(round_idx+1, test_loss, accuracy, mal_test_loss, 100. * correct / len(mal_train_loaders.dataset)))
+                print('\nMalicious set: Accuracy: {:.4f}, Attack Success Rate: {}/{} ({:.0f}%)\n'.format(accuracy, correct, len(mal_train_loaders.dataset), 100. * correct / len(mal_train_loaders.dataset)))
+            
+
+            elif args.attack == 'backdoor':
+
+                mal_test_loss = 0
+                correct = 0
+                with torch.no_grad():
+                    for feature, target in test_loader:
+                        feature = (TF.erase(feature, 0, 0, 5, 5, 0).to(device))
+                        target = torch.zeros(1, dtype=torch.long).to(device)
+                        output = network(feature)
+                        mal_test_loss += F.nll_loss(output, target, size_average=False).item()
+                        pred = output.data.max(1, keepdim=True)[1]
+                        correct += pred.eq(target.data.view_as(pred)).sum()
+                test_loss /= len(test_loader.dataset)
+                txt_file.write('%d, \t%f, \t%f, \t%f, \t%f\n'%(round_idx+1, test_loss, accuracy, mal_test_loss, 100. * correct / len(test_loader.dataset)))
+                print('\nMalicious set: Accuracy: {:.4f}, Attack Success Rate: {}/{} ({:.0f}%)\n'.format(accuracy, correct, len(test_loader.dataset), 100. * correct / len(test_loader.dataset)))
+
+
+            else:
+
+                txt_file.write('%d, \t%f, \t%f\n'%(round_idx+1, test_loss, accuracy))
+                print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct, len(test_loader.dataset), accuracy))
