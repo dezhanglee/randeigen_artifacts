@@ -6,5 +6,6 @@ The notebooks are
 - gradient_matching_no_randeigen.ipynb: A MWE of how a pretrained resnet18 model is susceptible to the precomputed poisoned samples generated using the gradient matching attack
 - gradient_matching_with_randeigen.ipynb: A MWE of how randeigen is incorporated in the training process to filter out poisoned samples, and the resulting trained model does not misclassify the precomputed poisoned data, while mantaining comparable high training/test accuracy. 
 
+All the default parameters are hardcoded into the notebooks. In the final cell of each notebook, the ASR is computed. 
 
 Basic functionality test: Both notebooks should run successfully without any errors. 
