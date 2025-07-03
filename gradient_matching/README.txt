@@ -8,4 +8,6 @@ The notebooks are
 
 All the default parameters are hardcoded into the notebooks. In the final cell of each notebook, the ASR is computed. 
 
+The software dependencies are given in the readme.txt folder. The Python version is 3.9.2 (32-bit)
+
 Basic functionality test: Both notebooks should run successfully without any errors. 
