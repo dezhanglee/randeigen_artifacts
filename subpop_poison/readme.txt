@@ -10,3 +10,5 @@ For convenience (as the code takes a long time to run), we included the code out
 Note that due to the randomness involved in the attack, the results are non-deterministic but should be similar (within +- 10%). 
 
 Basic functionality test: Both notebooks should run successfully without any errors. 
+
+The software dependencies are given in the readme.txt folder. The Python version is 3.9.2 (32-bit)
