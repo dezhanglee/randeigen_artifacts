@@ -407,7 +407,7 @@ def _randomized_agg(data, eps_poison=0.2, eps_jl=0.1, eps_pow = 0.1, threshold =
     power_iter_rounds = int(- math.log(4*k)/(2*math.log(1-eps_pow)))
     clean_eigen = clean_eigen * d/k
     old_eigenvalue = None
-    for _ in range(max(int(eps_poison*n), 10)):
+    for _ in range(max(int(2*eps_poison*n), 10)):
         Y_mean = torch.mean(Y, dim=0)
         Y = (Y - Y_mean)
         Y_cov = torch.cov(Y.T)
@@ -421,7 +421,7 @@ def _randomized_agg(data, eps_poison=0.2, eps_jl=0.1, eps_pow = 0.1, threshold =
             print('converge')
             break
 
-        if sum([i > 0.5 for i in proj_Y/torch.max(proj_Y)]) > len(proj_Y)*(1-2*eps_poison):
+        if len(Y) <= (1-5*eps_poison)*n:
             print('new_criteria')
             break 
         old_eigenvalue = eigenvalue
